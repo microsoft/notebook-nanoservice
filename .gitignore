@@ -398,3 +398,9 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Python cache
+__pycache__
+
+# local package installation
+**/*.egg-info/
