@@ -45,7 +45,7 @@ class NanoService:
         ]
 
     output_class_rules = {
-        # Convert Pandas DataFrame to JSON-friendly format
+        # we use strings instead of types to avoid dependency issues
         "pandas": lambda instance: (
             instance.to_dict(orient="records"), 'json'
         ) if instance.__class__.__module__ == "pandas.core.frame" and instance.__class__.__name__ == "DataFrame" else None,
@@ -69,7 +69,6 @@ class NanoService:
     
     @staticmethod
     def sanitize_for_json(value, trace):
-        """Sanitize objects for JSON serialization."""
         if isinstance(value, dict):
             return {k: NanoService.sanitize_for_json(v, trace) for k, v in value.items()}
         elif isinstance(value, list):
@@ -101,7 +100,6 @@ class NanoService:
 
     @staticmethod
     def generate_markdown_metadata(metadata):
-        """Generate markdown-formatted metadata."""
         none_placeholder = '<none>'
         unknown_placeholder = '<unknown>'
         md_output = "# API Metadata\n\n"
