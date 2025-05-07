@@ -218,6 +218,7 @@ class NanoService:
     def start(self):
         from threading import Thread
         self._server = self.ThreadedHTTPServer((self._host, self._port), self.RequestHandler)
+        self._server.nanoservice_instance = self
         self._thread = Thread(target=self._server.serve_forever)
         self._thread.start()
 
@@ -251,10 +252,10 @@ class NanoService:
                 path = parsed_path.path.strip("/")
                 
                 if path == "":  # Root route
-                    self.handle_root(self, query_params)
+                    self.server.nanoservice_instance.handle_root(self, query_params)
                 else:  # Wildcard route
                     trace = ["Received GET request URL: " + self.path]
-                    self._call_function(self, path, query_params, trace)
+                    self.server.nanoservice_instance._call_function(self, path, query_params, trace)
             except NanoService.DetailedHTTPException as e:
                 self._send_response(e.status_code, json.dumps(e.detail))
             except Exception as e:
@@ -274,7 +275,7 @@ class NanoService:
                     self._send_response(405, json.dumps({"detail": "POST not allowed on root route"}))
                 else:  # Wildcard route
                     trace = ["Received POST request URL: " + self.path]
-                    self._call_function(self, path, data, trace)
+                    self.server.nanoservice_instance._call_function(self, path, data, trace)
             except json.JSONDecodeError:
                 self._send_response(400, json.dumps({"detail": "Invalid JSON in request body"}))
             except NanoService.DetailedHTTPException as e:
