@@ -99,6 +99,21 @@ class NanoService:
         img_io.seek(0)
         return img_io.getvalue()
 
+    @staticmethod
+    def generate_markdown_metadata(metadata):
+        """Generate markdown-formatted metadata."""
+        none_placeholder = '<none>'
+        unknown_placeholder = '<unknown>'
+        md_output = "# API Metadata\n\n"
+        for name, details in metadata.items():
+            md_output += f"## {name}\n"
+            md_output += f"**Signature:** {details.get('signature', '')}\n\n"
+            doc = details.get('doc', none_placeholder) or none_placeholder
+            return_annotation = details.get('return', unknown_placeholder) or unknown_placeholder
+            md_output += f"**Documentation:**\n{doc}\n\n"
+            md_output += f"**Return:** {return_annotation}\n\n"
+        return md_output
+
     def handle_root(self, handler, query_params):
         import inspect
         self.trace_enabled = query_params.get("trace_enabled", ["false"])[0].lower() == "true"
@@ -125,11 +140,7 @@ class NanoService:
             metadata = {"error": "No global context found."}
 
         if format_type == "md":
-            md_output = "# API Metadata\n\n"
-            for name, details in metadata.items():
-                md_output += f"## {name}\n"
-                md_output += f"**Signature:** `{details.get('signature', '')}`\n\n"
-                md_output += f"**Documentation:**\n\n{details.get('doc', 'No documentation available.')}\n\n"
+            md_output = self.generate_markdown_metadata(metadata)
             handler._send_response(200, md_output, "text/markdown")
         else:
             handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "metadata": metadata}))
@@ -293,3 +304,4 @@ class NanoService:
         def __init__(self, status_code: int, detail: str, trace: list = None):
             self.status_code = status_code
             self.detail = {"detail": detail, "trace": trace or []}
+
