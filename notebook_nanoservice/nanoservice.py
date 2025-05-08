@@ -68,51 +68,6 @@ class NanoService:
         ) if hasattr(obj, "strftime") else None,
     }
     
-    @staticmethod
-    def sanitize_for_json(value, trace):
-        if isinstance(value, dict):
-            return {k: NanoService.sanitize_for_json(v, trace) for k, v in value.items()}
-        elif isinstance(value, list):
-            return [NanoService.sanitize_for_json(v, trace) for v in value]
-        elif hasattr(value, "isoformat"):  # Handle datetime-like objects
-            return value.isoformat()
-        elif isinstance(value, float):
-            if math.isnan(value) or math.isinf(value):
-                return None
-        else:
-            # Apply custom sanitization rules
-            for rule_name, rule_func in NanoService.sanitize_rules.items():
-                try:
-                    result = rule_func(value)
-                except Exception as e:
-                    trace.append(f"Error applying sanitize rule '{rule_name}': {str(e)}")
-                    result = None
-                if result is not None:
-                    return result
-        return value
-
-    @staticmethod
-    def convert_image_to_png_bytes(method_callable):
-        import io
-        img_io = io.BytesIO()
-        method_callable(img_io, format='PNG')
-        img_io.seek(0)
-        return img_io.getvalue()
-
-    @staticmethod
-    def generate_markdown_metadata(metadata):
-        none_placeholder = '<none>'
-        unknown_placeholder = '<unknown>'
-        md_output = "# API Metadata\n\n"
-        for name, details in metadata.items():
-            md_output += f"## {name}\n"
-            md_output += f"**Signature:** {details.get('signature', '')}\n\n"
-            doc = details.get('doc', none_placeholder) or none_placeholder
-            return_annotation = details.get('return', unknown_placeholder) or unknown_placeholder
-            md_output += f"**Documentation:**\n{doc}\n\n"
-            md_output += f"**Return:** {return_annotation}\n\n"
-        return md_output
-
     def handle_root(self, handler, query_params):
         import inspect
         self.trace_enabled = query_params.get("trace_enabled", ["false"])[0].lower() == "true"
@@ -305,3 +260,48 @@ class NanoService:
         def __init__(self, status_code: int, detail: str, trace: list = None):
             self.status_code = status_code
             self.detail = {"detail": detail, "trace": trace or []}
+
+    @staticmethod
+    def sanitize_for_json(value, trace):
+        if isinstance(value, dict):
+            return {k: NanoService.sanitize_for_json(v, trace) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [NanoService.sanitize_for_json(v, trace) for v in value]
+        elif hasattr(value, "isoformat"):  # Handle datetime-like objects
+            return value.isoformat()
+        elif isinstance(value, float):
+            if math.isnan(value) or math.isinf(value):
+                return None
+        else:
+            # Apply custom sanitization rules
+            for rule_name, rule_func in NanoService.sanitize_rules.items():
+                try:
+                    result = rule_func(value)
+                except Exception as e:
+                    trace.append(f"Error applying sanitize rule '{rule_name}': {str(e)}")
+                    result = None
+                if result is not None:
+                    return result
+        return value
+
+    @staticmethod
+    def convert_image_to_png_bytes(method_callable):
+        import io
+        img_io = io.BytesIO()
+        method_callable(img_io, format='PNG')
+        img_io.seek(0)
+        return img_io.getvalue()
+
+    @staticmethod
+    def generate_markdown_metadata(metadata):
+        none_placeholder = "**none**"
+        unknown_placeholder = "**unknown**"
+        md_output = "# API Metadata\n\n"
+        for name, details in metadata.items():
+            md_output += f"## {name}\n"
+            md_output += f"### Signature\n{details.get('signature', '')}\n\n"
+            doc = details.get('doc', none_placeholder) or none_placeholder
+            return_annotation = details.get('return', unknown_placeholder) or unknown_placeholder
+            md_output += f"### Documentation\n{doc}\n\n"
+            md_output += f"### Return\n{return_annotation}\n\n"
+        return md_output
