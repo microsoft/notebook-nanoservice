@@ -3,16 +3,15 @@ Nanoservices for notebooks.
 
 Quickly and effortlessly expose your notebook's capabilities via a REST API. 
 
-Combine with Ngrok to share your notebook's functionality with others.
-
-This library is not intended for production use, but it provides a low-friction way to prototype a small backend service.
+> **Note:** This library is designed to scaffold a small backend service for ease of development and prototyping purposes only. Not for production use.
 
 ## Features
 * Hot functions - redefine your functions as you go without restarting the service.
-* No decoration required, all functions are exposed.
+* No decoration required.
 * Auto serialization for primitive types, lists, Pandas dataframes, and images. Extensible for other types.
 * Works with Jupyter & Spark notebooks, probably others.
-* Tiny footprint without requirements.
+* Tiny footprint.
+* API manifest in JSON or markdown, suitable for use with LLMs.
 
 ## Installation
 ```bash
