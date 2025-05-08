@@ -12,7 +12,7 @@ class NanoService:
     def host(self):
         return self._host
 
-    def __init__(self, global_context, host="127.0.0.1", port=5001):
+    def __init__(self, global_context, host="127.0.0.1", port=5001, include_source=False):
         if not global_context:
             raise ValueError("global_context is required and cannot be None.")
 
@@ -22,6 +22,7 @@ class NanoService:
         self._thread = None
         self.global_context = global_context
         self.trace_enabled = False
+        self.include_source = include_source
         self.ignore_functions = [
             #kernel
             "exit",
@@ -128,10 +129,12 @@ class NanoService:
                             sig = inspect.signature(obj)
                             metadata[name] = {
                                 "signature": str(sig),
-                                "source": inspect.getsource(obj),
+                                "source": "<unavailable>",
                                 "doc": obj.__doc__ or "",
                                 "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else ""
                             }
+                            if self.include_source:
+                                metadata[name]["source"] = inspect.getsource(obj)
                     except Exception:
                         pass
         else:
@@ -302,4 +305,3 @@ class NanoService:
         def __init__(self, status_code: int, detail: str, trace: list = None):
             self.status_code = status_code
             self.detail = {"detail": detail, "trace": trace or []}
-
