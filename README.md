@@ -65,13 +65,14 @@ service.stop()
 The `NanoService` class is initialized to expose the global context of a Jupyter notebook or Python script via a REST API:
 
 ```python
-NanoService(global_context, host, port)
+NanoService(global_context, host, port, include_source)
 ```
 
 #### Parameters
 - `global_context` (dict, required): The global context to expose. Typically passed as `globals()` from the notebook or script.
 - `host` (str, optional): The host address for the server. Defaults to `"127.0.0.1"`.
 - `port` (int, optional): The port number for the server. Defaults to `5001`.
+- `include_source` (bool, optional): Whether to include the source code of functions in the metadata. Defaults to `False`.
 
 Multiple service instances can run simultaneously by having unique port numbers.
 ```python
