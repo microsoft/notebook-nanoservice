@@ -101,7 +101,7 @@ pip install -r requirements.txt
 ```
 
 Install the package locally:
-Open [test\local_install.ipynb](test\local_install.ipynb) and follow instructions within.
+Open [test/local_install.ipynb](test/local_install.ipynb) and follow instructions within.
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for details.
