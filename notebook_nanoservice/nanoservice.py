@@ -99,7 +99,7 @@ class NanoService:
             md_output = self.generate_markdown_metadata(metadata)
             handler._send_response(200, md_output, "text/markdown")
         else:
-            handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "metadata": metadata}))
+            handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "api": metadata}))
 
     def _call_function(self, handler, function_name, params, trace):
         import inspect
@@ -310,7 +310,7 @@ class NanoService:
         unknown_placeholder = "**unknown**"
         md_output = "# API Metadata\n\n"
         for name, details in metadata.items():
-            md_output += f"## {name}\n"
+            md_output += f"## [/api/{name}](/api/{name})\n"
             md_output += f"### Signature\n{details.get('signature', '')}\n\n"
             doc = details.get('doc', none_placeholder) or none_placeholder
             return_annotation = details.get('return', unknown_placeholder) or unknown_placeholder
