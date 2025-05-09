@@ -220,6 +220,8 @@ class NanoService:
 
                 if path == "":  # Root route
                     self.server.nanoservice_instance.handle_root(self, query_params)
+                elif path == "api":  # Exact match for '/api/'
+                    self.server.nanoservice_instance.handle_root(self, query_params)
                 elif path.startswith("api/"):
                     path = path[4:]  # Remove the 'api/' prefix
                     if path == "":  # Root route under 'api'
@@ -245,6 +247,8 @@ class NanoService:
                 data = json.loads(body) if body else {}
 
                 if path == "":  # Root route (not typically used for POST)
+                    self._send_response(405, json.dumps({"detail": "POST not allowed on root route"}))
+                elif path == "api":  # Exact match for '/api/'
                     self._send_response(405, json.dumps({"detail": "POST not allowed on root route"}))
                 elif path.startswith("api/"):
                     path = path[4:]  # Remove the 'api/' prefix
