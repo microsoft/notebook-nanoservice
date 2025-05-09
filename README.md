@@ -37,7 +37,7 @@ If you have a function such as:
 def concat(a, b):
     return a + b
 ```
-It can be invoked at http://localhost:5001/concat?a=value1&b=value2
+It can be invoked at http://localhost:5001/api/concat?a=value1&b=value2
 
 See [test/sample.ipynb](test/sample.ipynb) for examples of type casting the parameters.
 

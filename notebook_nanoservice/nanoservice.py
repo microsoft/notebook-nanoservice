@@ -217,12 +217,18 @@ class NanoService:
                 parsed_path = urlparse(self.path)
                 query_params = parse_qs(parsed_path.query)
                 path = parsed_path.path.strip("/")
-                
+
                 if path == "":  # Root route
                     self.server.nanoservice_instance.handle_root(self, query_params)
-                else:  # Wildcard route
-                    trace = ["Received GET request URL: " + self.path]
-                    self.server.nanoservice_instance._call_function(self, path, query_params, trace)
+                elif path.startswith("api/"):
+                    path = path[4:]  # Remove the 'api/' prefix
+                    if path == "":  # Root route under 'api'
+                        self.server.nanoservice_instance.handle_root(self, query_params)
+                    else:  # Wildcard route under 'api'
+                        trace = ["Received GET request URL: " + self.path]
+                        self.server.nanoservice_instance._call_function(self, path, query_params, trace)
+                else:
+                    self._send_response(404, json.dumps({"detail": "Not Found"}))
             except NanoService.DetailedHTTPException as e:
                 self._send_response(e.status_code, json.dumps(e.detail))
             except Exception as e:
@@ -240,9 +246,15 @@ class NanoService:
 
                 if path == "":  # Root route (not typically used for POST)
                     self._send_response(405, json.dumps({"detail": "POST not allowed on root route"}))
-                else:  # Wildcard route
-                    trace = ["Received POST request URL: " + self.path]
-                    self.server.nanoservice_instance._call_function(self, path, data, trace)
+                elif path.startswith("api/"):
+                    path = path[4:]  # Remove the 'api/' prefix
+                    if path == "":  # Root route under 'api'
+                        self._send_response(405, json.dumps({"detail": "POST not allowed on root route"}))
+                    else:  # Wildcard route under 'api'
+                        trace = ["Received POST request URL: " + self.path]
+                        self.server.nanoservice_instance._call_function(self, path, data, trace)
+                else:
+                    self._send_response(404, json.dumps({"detail": "Not Found"}))
             except json.JSONDecodeError:
                 self._send_response(400, json.dumps({"detail": "Invalid JSON in request body"}))
             except NanoService.DetailedHTTPException as e:
