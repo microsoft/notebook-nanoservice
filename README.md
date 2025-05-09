@@ -10,7 +10,7 @@ Quickly and effortlessly expose your notebook's capabilities via a REST API.
 * No decoration required.
 * Auto serialization for primitive types, lists, Pandas dataframes, and images. Extensible for other types.
 * Works with Jupyter & Spark notebooks, probably others.
-* Tiny footprint.
+* No dependency conflicts.
 * API manifest in JSON or markdown, suitable for use with LLMs.
 
 ## Installation
