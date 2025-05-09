@@ -18,42 +18,31 @@ Quickly and effortlessly expose your notebook's capabilities via a REST API.
 pip install notebook-nanoservice
 ```
 
-## Usage (on localhost)
-Initialize a server:
+## Usage
+
+### Initialize a server
 ```python
 from notebook_nanoservice import NanoService
 service = NanoService(globals())
 service.start()
 ```
 
-Stop and free up the port:
+### View the manifest
+Open http://localhost:5001 to see a JSON manifest of your API (the global functions in your notebook).
+You may also see it in markdown at http://localhost:5001/?format=md
+
+### Invoke a function
+If you have a function such as:
 ```python
-service.stop()
+def concat(a, b):
+    return a + b
 ```
+It can be invoked at http://localhost:5001/concat?a=value1&b=value2
 
-## Combine with ngrok
-The [pyngrok](https://pyngrok.readthedocs.io/) library is multithreaded and will not "lock up" your notebook kernel.
+See [test/sample.ipynb](test/sample.ipynb) for examples of type casting the parameters.
 
-```bash
-pip install pyngrok
-```
-
-Initialize a server:
+### Stop and free up the port
 ```python
-from notebook_nanoservice import NanoService
-service = NanoService(globals())
-service.start()
-
-from pyngrok import ngrok
-ngrok.set_auth_token(os.getenv("NGROK_AUTHTOKEN"))
-
-tunnel = ngrok.connect(service.port)
-print("Public URL:", tunnel.public_url)
-```
-
-Stop and free up the port and tunnel:
-```python
-ngrok.kill()
 service.stop()
 ```
 
