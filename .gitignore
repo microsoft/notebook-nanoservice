@@ -404,3 +404,6 @@ __pycache__
 
 # local package installation
 **/*.egg-info/
+
+# dist
+dist/
