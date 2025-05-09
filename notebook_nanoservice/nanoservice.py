@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 import json
 import math
 from http.server import BaseHTTPRequestHandler, HTTPServer
