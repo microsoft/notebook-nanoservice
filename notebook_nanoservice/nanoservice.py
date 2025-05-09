@@ -84,7 +84,7 @@ class NanoService:
                             sig = inspect.signature(obj)
                             metadata[name] = {
                                 "signature": str(sig),
-                                "source": "<unavailable>",
+                                "source": "(unavailable)",
                                 "doc": obj.__doc__ or "",
                                 "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else ""
                             }
