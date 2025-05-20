@@ -59,9 +59,12 @@ class NanoService:
         "PIL": lambda instance: (
             NanoService.convert_image_to_png_bytes(instance.save), 'image'
         ) if instance.__class__.__module__ == "PIL.Image" and instance.__class__.__name__ == "Image" else None,
-        "matplotlib": lambda instance: (
+        "matplotlib_figure": lambda instance: (
             NanoService.convert_image_to_png_bytes(instance.savefig), 'image'
         ) if instance.__class__.__module__ in ["matplotlib.figure", "seaborn.axisgrid"] and hasattr(instance, "savefig") else None,
+        "matplotlib_pyplot": lambda instance: (
+            NanoService.convert_image_to_png_bytes(instance.gcf().savefig), 'image'
+        ) if instance.__name__ == "matplotlib.pyplot" else None,
     }
 
     sanitize_rules = {
