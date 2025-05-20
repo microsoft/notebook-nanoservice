@@ -51,7 +51,15 @@ class NanoService:
     output_class_rules = {
         # we use strings instead of types to avoid dependency issues
         "pandas": lambda instance: (
-            instance.to_dict(orient="records"), 'json'
+            (
+                instance.reset_index()
+                if not (
+                    instance.index.__class__.__name__ == "RangeIndex"
+                    and instance.index.__repr__().startswith("RangeIndex(start=0")
+                )
+                else instance
+            ).to_dict(orient="records"),
+            'json'
         ) if instance.__class__.__module__ == "pandas.core.frame" and instance.__class__.__name__ == "DataFrame" else None,
         "spark": lambda instance: (
             instance.toPandas().to_dict(orient="records"), 'json'
