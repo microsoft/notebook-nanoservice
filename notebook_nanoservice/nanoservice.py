@@ -198,6 +198,22 @@ class NanoService:
 
     def start(self):
         from threading import Thread
+        import socket
+
+        # Check if the port is available without binding to it
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                result = sock.connect_ex((self._host, self._port))
+                if result == 0:
+                    raise RuntimeError(f"Port {self._port} is already in use.")
+            except Exception as e:
+                # Only raise if it's not "connection refused" (port is free)
+                if isinstance(e, OSError):
+                    pass
+                else:
+                    raise
+
         self._server = self.ThreadedHTTPServer((self._host, self._port), self.RequestHandler)
         self._server.nanoservice_instance = self
         self._thread = Thread(target=self._server.serve_forever)
