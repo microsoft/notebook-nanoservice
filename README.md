@@ -1,7 +1,7 @@
 # notebook_nanoservice
 Nanoservices for notebooks.
 
-Quickly and effortlessly expose your notebook's capabilities via a REST API. 
+Quickly and effortlessly expose your notebook's functions via a REST API. 
 
 > **Note:** This library is designed to scaffold a small backend service for ease of development and prototyping purposes only. Not for production use.
 
