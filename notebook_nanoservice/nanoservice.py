@@ -82,7 +82,7 @@ class NanoService:
         ) if hasattr(obj, "strftime") else None,
     }
     
-    def handle_root(self, handler, query_params):
+    def get_notebook_api(self, handler, query_params):
         import inspect
         self.trace_enabled = query_params.get("trace_enabled", ["false"])[0].lower() == "true"
         format_type = query_params.get("format", ["json"])[0].lower()
@@ -249,13 +249,13 @@ class NanoService:
                 path = parsed_path.path.strip("/")
 
                 if path == "":  # Root route
-                    self.server.nanoservice_instance.handle_root(self, query_params)
+                    self.server.nanoservice_instance.get_notebook_api(self, query_params)
                 elif path == "api":  # Exact match for '/api/'
-                    self.server.nanoservice_instance.handle_root(self, query_params)
+                    self.server.nanoservice_instance.get_notebook_api(self, query_params)
                 elif path.startswith("api/"):
                     path = path[4:]  # Remove the 'api/' prefix
                     if path == "":  # Root route under 'api'
-                        self.server.nanoservice_instance.handle_root(self, query_params)
+                        self.server.nanoservice_instance.get_notebook_api(self, query_params)
                     else:  # Wildcard route under 'api'
                         trace = ["Received GET request URL: " + self.path]
                         self.server.nanoservice_instance._call_function(self, path, query_params, trace)
