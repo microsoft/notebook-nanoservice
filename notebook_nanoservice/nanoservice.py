@@ -99,7 +99,8 @@ class NanoService:
                                 "signature": str(sig),
                                 "source": "(unavailable)",
                                 "doc": obj.__doc__ or "",
-                                "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else ""
+                                "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else "",
+                                "params": self._extract_parameters(sig)
                             }
                             if self.include_source:
                                 nano_api[name]["source"] = inspect.getsource(obj)
@@ -351,13 +352,173 @@ class NanoService:
             doc = details.get('doc', none_placeholder) or none_placeholder
             return_annotation = details.get('return', unknown_placeholder) or unknown_placeholder
             md_output += f"### Documentation\n{doc}\n\n"
-            md_output += f"### Return\n{return_annotation}\n\n"
+            md_output += f"### Return\n{return_annotation}\n\n"        
         return md_output
-    
+
     @staticmethod
     def generate_openapi_spec(nano_api):
-        # TODO - Implement a proper OpenAPI spec generation based on nano_api
+        """Generate a minimal OpenAPI 3.0 specification from nano_api."""
         spec = {
             "openapi": "3.0.0",
+            "info": {
+                "title": "Notebook Nanoservice API",
+                "version": "1.0.0"
+            },
+            "paths": {}
         }
+        
+        # Skip if there's an error in nano_api
+        if "error" in nano_api:
+            return spec
+            
+        for function_name, function_info in nano_api.items():
+            path = f"/api/{function_name}"
+            
+            # Basic parameter processing
+            parameters = []
+            request_body = None
+            
+            # Convert nano_api params to OpenAPI parameters
+            for param in function_info.get("params", []):
+                if param["type"] == "array":
+                    # For GET requests, arrays use the [] suffix notation
+                    parameters.append({
+                        "name": f"{param['name']}[]",
+                        "in": "query",
+                        "required": param["required"],
+                        "schema": {
+                            "type": "array",
+                            "items": param.get("items", {"type": "string"})
+                        }
+                    })
+                else:
+                    parameters.append({
+                        "name": param["name"],
+                        "in": "query", 
+                        "required": param["required"],
+                        "schema": {"type": param["type"]}
+                    })
+            
+            # Create request body schema for POST requests
+            if function_info.get("params"):
+                properties = {}
+                required_fields = []
+                
+                for param in function_info["params"]:
+                    if param["type"] == "array":
+                        properties[param["name"]] = {
+                            "type": "array",
+                            "items": param.get("items", {"type": "string"})
+                        }
+                    else:
+                        properties[param["name"]] = {"type": param["type"]}
+                    
+                    if param["required"]:
+                        required_fields.append(param["name"])
+                
+                if properties:
+                    request_body = {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": properties
+                                }
+                            }
+                        }
+                    }
+                    if required_fields:
+                        request_body["content"]["application/json"]["schema"]["required"] = required_fields
+            
+            # Determine response content type based on function return type or common patterns
+            response_content = {"application/json": {"schema": {"type": "object"}}}
+            
+            # Check if function likely returns an image based on name patterns
+            if any(keyword in function_name.lower() for keyword in ['image', 'chart', 'plot', 'graph', 'heatmap']):
+                response_content["image/png"] = {"schema": {"type": "string", "format": "binary"}}
+            
+            # Create path operations
+            spec["paths"][path] = {}
+            
+            # GET operation
+            get_op = {
+                "summary": function_info.get("doc") or f"Execute {function_name}",
+                "parameters": parameters,
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": response_content
+                    }
+                }
+            }
+            spec["paths"][path]["get"] = get_op
+            
+            # POST operation
+            post_op = {
+                "summary": function_info.get("doc") or f"Execute {function_name}",
+                "responses": {
+                    "200": {
+                        "description": "Successful response", 
+                        "content": response_content
+                    }
+                }
+            }
+            if request_body:
+                post_op["requestBody"] = request_body
+                
+            spec["paths"][path]["post"] = post_op
+        
         return spec
+
+    def _extract_parameters(self, sig):
+        """Extract parameter information from function signature for OpenAPI spec."""
+        import inspect
+        from typing import get_origin, List
+        
+        params = []
+        for param_name, param in sig.parameters.items():
+            param_info = {
+                "name": param_name,
+                "required": param.default == inspect.Parameter.empty,
+                "type": "string"  # default type
+            }
+            
+            # Determine parameter type from annotation
+            if param.annotation != inspect._empty:
+                if param.annotation == int:
+                    param_info["type"] = "integer"
+                elif param.annotation == float:
+                    param_info["type"] = "number"
+                elif param.annotation == bool:
+                    param_info["type"] = "boolean"
+                elif param.annotation == str:
+                    param_info["type"] = "string"
+                elif get_origin(param.annotation) == list or param.annotation == List:
+                    param_info["type"] = "array"
+                    # Try to get the inner type for arrays
+                    if hasattr(param.annotation, '__args__') and param.annotation.__args__:
+                        inner_type = param.annotation.__args__[0]
+                        if inner_type == int:
+                            param_info["items"] = {"type": "integer"}
+                        elif inner_type == float:
+                            param_info["items"] = {"type": "number"}
+                        elif inner_type == str:
+                            param_info["items"] = {"type": "string"}
+                        else:
+                            param_info["items"] = {"type": "string"}
+                    else:
+                        param_info["items"] = {"type": "string"}
+            elif param.default != inspect.Parameter.empty:
+                # Infer type from default value
+                if isinstance(param.default, int):
+                    param_info["type"] = "integer"
+                elif isinstance(param.default, float):
+                    param_info["type"] = "number"
+                elif isinstance(param.default, bool):
+                    param_info["type"] = "boolean"
+                elif isinstance(param.default, str):
+                    param_info["type"] = "string"
+            
+            params.append(param_info)
+        
+        return params
