@@ -110,9 +110,9 @@ class NanoService:
             metadata = {"error": "No global context found."}
 
         if format_type == "openapi":
-            #TODO generate OpenAPI spec
-            handler._send_response(500, json.dumps({"error": "OpenAPI spec generation not implemented"}))
-        if format_type == "md":
+            openapi_spec = self.generate_openapi_spec(metadata)
+            handler._send_response(200, json.dumps(openapi_spec), "application/json")
+        elif format_type == "md":
             md_output = self.generate_markdown_metadata(metadata)
             handler._send_response(200, md_output, "text/markdown")
         else:
@@ -354,3 +354,11 @@ class NanoService:
             md_output += f"### Documentation\n{doc}\n\n"
             md_output += f"### Return\n{return_annotation}\n\n"
         return md_output
+    
+    @staticmethod
+    def generate_openapi_spec(metadata):
+        # TODO - Implement a proper OpenAPI spec generation based on metadata
+        spec = {
+            "openapi": "3.0.0",
+        }
+        return spec
