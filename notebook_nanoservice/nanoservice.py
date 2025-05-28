@@ -87,8 +87,7 @@ class NanoService:
         self.trace_enabled = query_params.get("trace_enabled", ["false"])[0].lower() == "true"
         format_type = query_params.get("format", ["json"])[0].lower()
 
-        # Collect metadata from global_context
-        metadata = {}
+        nano_api = {}
 
         if self.global_context:
             for name, obj in self.global_context.items():
@@ -96,27 +95,27 @@ class NanoService:
                     try:
                         if hasattr(obj, '__code__') or hasattr(obj, '__func__'):
                             sig = inspect.signature(obj)
-                            metadata[name] = {
+                            nano_api[name] = {
                                 "signature": str(sig),
                                 "source": "(unavailable)",
                                 "doc": obj.__doc__ or "",
                                 "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else ""
                             }
                             if self.include_source:
-                                metadata[name]["source"] = inspect.getsource(obj)
+                                nano_api[name]["source"] = inspect.getsource(obj)
                     except Exception:
                         pass
         else:
-            metadata = {"error": "No global context found."}
+            nano_api = {"error": "No global context found."}
 
         if format_type == "openapi":
-            openapi_spec = self.generate_openapi_spec(metadata)
+            openapi_spec = self.generate_openapi_spec(nano_api)
             handler._send_response(200, json.dumps(openapi_spec), "application/json")
         elif format_type == "md":
-            md_output = self.generate_markdown_metadata(metadata)
+            md_output = self.generate_markdown(nano_api)
             handler._send_response(200, md_output, "text/markdown")
         else:
-            handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "api": metadata}), "application/json")
+            handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "api": nano_api}), "application/json")
 
     def _call_function(self, handler, function_name, params, trace):
         import inspect
@@ -342,11 +341,11 @@ class NanoService:
         return img_io.getvalue()
 
     @staticmethod
-    def generate_markdown_metadata(metadata):
+    def generate_markdown(nano_api):
         none_placeholder = "**none**"
         unknown_placeholder = "**unknown**"
-        md_output = "# API Metadata\n\n"
-        for name, details in metadata.items():
+        md_output = "# API nano_api\n\n"
+        for name, details in nano_api.items():
             md_output += f"## [/api/{name}](/api/{name})\n"
             md_output += f"### Signature\n{details.get('signature', '')}\n\n"
             doc = details.get('doc', none_placeholder) or none_placeholder
@@ -356,8 +355,8 @@ class NanoService:
         return md_output
     
     @staticmethod
-    def generate_openapi_spec(metadata):
-        # TODO - Implement a proper OpenAPI spec generation based on metadata
+    def generate_openapi_spec(nano_api):
+        # TODO - Implement a proper OpenAPI spec generation based on nano_api
         spec = {
             "openapi": "3.0.0",
         }
