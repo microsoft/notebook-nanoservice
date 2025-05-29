@@ -110,7 +110,17 @@ class NanoService:
             nano_api = {"error": "No global context found."}
 
         if format_type == "openapi":
-            openapi_spec = self.generate_openapi_spec(nano_api)
+            # Extract base_url parameter for OpenAPI spec generation
+            base_url = query_params.get("base_url", [None])[0]
+            # If no base_url provided, construct from server host/port
+            if not base_url:
+                protocol = 'https' if handler.headers.get('X-Forwarded-Proto') == 'https' else 'http'
+                host_header = handler.headers.get('Host')
+                if host_header:
+                    base_url = f"{protocol}://{host_header}"                
+                else:
+                    base_url = f"http://{self._host}:{self._port}"
+            openapi_spec = NanoService.generate_openapi_spec(nano_api, base_url)
             handler._send_response(200, json.dumps(openapi_spec), "application/json")
         elif format_type == "md":
             md_output = self.generate_markdown(nano_api)
@@ -352,11 +362,11 @@ class NanoService:
             doc = details.get('doc', none_placeholder) or none_placeholder
             return_annotation = details.get('return', unknown_placeholder) or unknown_placeholder
             md_output += f"### Documentation\n{doc}\n\n"
-            md_output += f"### Return\n{return_annotation}\n\n"        
+            md_output += f"### Return\n{return_annotation}\n\n"
         return md_output
 
     @staticmethod
-    def generate_openapi_spec(nano_api):
+    def generate_openapi_spec(nano_api, base_url=None):
         """Generate a minimal OpenAPI 3.0 specification from nano_api."""
         spec = {
             "openapi": "3.0.0",
@@ -366,6 +376,10 @@ class NanoService:
             },
             "paths": {}
         }
+        
+        # Add servers section with base URL if provided
+        if base_url:
+            spec["servers"] = [{"url": base_url}]
         
         # Skip if there's an error in nano_api
         if "error" in nano_api:
