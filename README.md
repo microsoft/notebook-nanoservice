@@ -28,8 +28,10 @@ service.start()
 ```
 
 ### View the manifest
-Open http://localhost:5001 to see a JSON manifest of your API (the global functions in your notebook).
-You may also see it in markdown at http://localhost:5001/?format=md
+View your API manifest in multiple formats:
+* **JSON**: http://localhost:5001 (default lightweight format)
+* **Markdown**: http://localhost:5001/?format=md
+* **OpenAPI v3**: http://localhost:5001/?format=openapi
 
 ### Invoke a function
 If you have a function such as:
