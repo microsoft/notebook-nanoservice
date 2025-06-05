@@ -355,14 +355,6 @@ class NanoService:
         return value
 
     @staticmethod
-    def _is_image_return_type(return_type_str):
-        """Check if a return type annotation indicates an image type."""
-        if not return_type_str:
-            return False
-        # Check if the return type contains any image-related type
-        return any(img_type in return_type_str for img_type in NanoService.image_type_patterns)
-
-    @staticmethod
     def convert_image_to_png_bytes(method_callable):
         import io
         img_io = io.BytesIO()
@@ -468,7 +460,7 @@ class NanoService:
             
             # Check if function likely returns an image based on return type annotation
             return_type = function_info.get("return", "")
-            if NanoService._is_image_return_type(return_type):
+            if return_type and any(img_type in return_type for img_type in NanoService.image_type_patterns):
                 response_content["image/png"] = {"schema": {"type": "string", "format": "binary"}}
             
             # Create path operations
