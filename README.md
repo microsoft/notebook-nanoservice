@@ -48,6 +48,10 @@ See [test/sample.ipynb](test/sample.ipynb) for examples of type casting the para
 service.stop()
 ```
 
+## Scenarios
+* Share your REST API via a tunnel such as Ngrok or Microsoft DevTunnels. 
+* [Stand up an MCP server over your REST API.](test/test_mcp.py)
+
 ## API
 
 ### Constructor
