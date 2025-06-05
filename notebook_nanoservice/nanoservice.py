@@ -48,6 +48,17 @@ class NanoService:
             "where_json",
         ]
 
+    # Image type patterns used by static type annotation checking
+    image_type_patterns = [
+        'PIL.Image',
+        'Image',
+        'matplotlib.figure.Figure',
+        'Figure',
+        'matplotlib.pyplot',
+        'pyplot',
+        'seaborn'
+    ]
+
     output_class_rules = {
         # we use strings instead of types to avoid dependency issues
         "pandas": lambda instance: (
@@ -348,20 +359,8 @@ class NanoService:
         """Check if a return type annotation indicates an image type."""
         if not return_type_str:
             return False
-            
-        # Common image-related types that would be handled by output_class_rules
-        image_types = [
-            'PIL.Image',
-            'Image',
-            'matplotlib.figure.Figure',
-            'Figure',
-            'matplotlib.pyplot',
-            'pyplot',
-            'seaborn'
-        ]
-        
         # Check if the return type contains any image-related type
-        return any(img_type in return_type_str for img_type in image_types)
+        return any(img_type in return_type_str for img_type in NanoService.image_type_patterns)
 
     @staticmethod
     def convert_image_to_png_bytes(method_callable):
