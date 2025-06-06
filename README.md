@@ -13,6 +13,10 @@ Quickly and effortlessly expose your notebook's functions via a REST API.
 * No dependency conflicts.
 * API manifest in JSON or markdown, suitable for use with LLMs.
 
+## Scenarios
+* Share your REST API via a tunnel such as Ngrok or Microsoft DevTunnels. 
+* [Stand up an MCP server over your REST API.](test/test_mcp.py)
+
 ## Installation
 ```bash
 pip install notebook-nanoservice
@@ -47,10 +51,6 @@ See [test/sample.ipynb](test/sample.ipynb) for examples of type casting the para
 ```python
 service.stop()
 ```
-
-## Scenarios
-* Share your REST API via a tunnel such as Ngrok or Microsoft DevTunnels. 
-* [Stand up an MCP server over your REST API.](test/test_mcp.py)
 
 ## API
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 setup(
     name="notebook_nanoservice",
-    version="0.1.2",
+    version="0.1.3",
     packages=find_packages(where="."),
     author="Your Name",
     author_email="danmar@microsoft@example.com",
