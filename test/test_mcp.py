@@ -1,3 +1,5 @@
+# example from https://gofastmcp.com/servers/openapi#quick-start
+
 import httpx
 from fastmcp import FastMCP
 
