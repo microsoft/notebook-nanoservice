@@ -3,3 +3,4 @@ pandas>=2.0
 Pillow
 requests
 seaborn
+fastmcp

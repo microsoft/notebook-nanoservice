@@ -48,6 +48,17 @@ class NanoService:
             "where_json",
         ]
 
+    # Image type patterns used by static type annotation checking
+    image_type_patterns = [
+        'PIL.Image',
+        'Image',
+        'matplotlib.figure.Figure',
+        'Figure',
+        'matplotlib.pyplot',
+        'pyplot',
+        'seaborn'
+    ]
+
     output_class_rules = {
         # we use strings instead of types to avoid dependency issues
         "pandas": lambda instance: (
@@ -82,13 +93,12 @@ class NanoService:
         ) if hasattr(obj, "strftime") else None,
     }
     
-    def handle_root(self, handler, query_params):
+    def get_notebook_api(self, handler, query_params):
         import inspect
         self.trace_enabled = query_params.get("trace_enabled", ["false"])[0].lower() == "true"
         format_type = query_params.get("format", ["json"])[0].lower()
 
-        # Collect metadata from global_context
-        metadata = {}
+        nano_api = {}
 
         if self.global_context:
             for name, obj in self.global_context.items():
@@ -96,24 +106,38 @@ class NanoService:
                     try:
                         if hasattr(obj, '__code__') or hasattr(obj, '__func__'):
                             sig = inspect.signature(obj)
-                            metadata[name] = {
+                            nano_api[name] = {
                                 "signature": str(sig),
                                 "source": "(unavailable)",
                                 "doc": obj.__doc__ or "",
-                                "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else ""
+                                "return": str(sig.return_annotation) if sig.return_annotation != inspect._empty else "",
+                                "params": self._extract_parameters(sig)
                             }
                             if self.include_source:
-                                metadata[name]["source"] = inspect.getsource(obj)
+                                nano_api[name]["source"] = inspect.getsource(obj)
                     except Exception:
                         pass
         else:
-            metadata = {"error": "No global context found."}
+            nano_api = {"error": "No global context found."}
 
-        if format_type == "md":
-            md_output = self.generate_markdown_metadata(metadata)
+        if format_type == "openapi":
+            # Extract base_url parameter for OpenAPI spec generation
+            base_url = query_params.get("base_url", [None])[0]
+            # If no base_url provided, construct from server host/port
+            if not base_url:
+                protocol = 'https' if handler.headers.get('X-Forwarded-Proto') == 'https' else 'http'
+                host_header = handler.headers.get('Host')
+                if host_header:
+                    base_url = f"{protocol}://{host_header}"                
+                else:
+                    base_url = f"http://{self._host}:{self._port}"
+            openapi_spec = NanoService.generate_openapi_spec(nano_api, base_url)
+            handler._send_response(200, json.dumps(openapi_spec), "application/json")
+        elif format_type == "md":
+            md_output = self.generate_markdown(nano_api)
             handler._send_response(200, md_output, "text/markdown")
         else:
-            handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "api": metadata}))
+            handler._send_response(200, json.dumps({"trace_enabled": self.trace_enabled, "api": nano_api}), "application/json")
 
     def _call_function(self, handler, function_name, params, trace):
         import inspect
@@ -249,13 +273,13 @@ class NanoService:
                 path = parsed_path.path.strip("/")
 
                 if path == "":  # Root route
-                    self.server.nanoservice_instance.handle_root(self, query_params)
+                    self.server.nanoservice_instance.get_notebook_api(self, query_params)
                 elif path == "api":  # Exact match for '/api/'
-                    self.server.nanoservice_instance.handle_root(self, query_params)
+                    self.server.nanoservice_instance.get_notebook_api(self, query_params)
                 elif path.startswith("api/"):
                     path = path[4:]  # Remove the 'api/' prefix
                     if path == "":  # Root route under 'api'
-                        self.server.nanoservice_instance.handle_root(self, query_params)
+                        self.server.nanoservice_instance.get_notebook_api(self, query_params)
                     else:  # Wildcard route under 'api'
                         trace = ["Received GET request URL: " + self.path]
                         self.server.nanoservice_instance._call_function(self, path, query_params, trace)
@@ -339,11 +363,11 @@ class NanoService:
         return img_io.getvalue()
 
     @staticmethod
-    def generate_markdown_metadata(metadata):
+    def generate_markdown(nano_api):
         none_placeholder = "**none**"
         unknown_placeholder = "**unknown**"
-        md_output = "# API Metadata\n\n"
-        for name, details in metadata.items():
+        md_output = "# API nano_api\n\n"
+        for name, details in nano_api.items():
             md_output += f"## [/api/{name}](/api/{name})\n"
             md_output += f"### Signature\n{details.get('signature', '')}\n\n"
             doc = details.get('doc', none_placeholder) or none_placeholder
@@ -351,3 +375,176 @@ class NanoService:
             md_output += f"### Documentation\n{doc}\n\n"
             md_output += f"### Return\n{return_annotation}\n\n"
         return md_output
+
+    @staticmethod
+    def generate_openapi_spec(nano_api, base_url=None):
+        """Generate a minimal OpenAPI 3.0 specification from nano_api."""
+        spec = {
+            "openapi": "3.0.0",
+            "info": {
+                "title": "Notebook Nanoservice API",
+                "version": "1.0.0"
+            },
+            "paths": {}
+        }
+        
+        # Add servers section with base URL if provided
+        if base_url:
+            spec["servers"] = [{"url": base_url}]
+        
+        # Skip if there's an error in nano_api
+        if "error" in nano_api:
+            return spec
+            
+        for function_name, function_info in nano_api.items():
+            path = f"/api/{function_name}"
+            
+            # Basic parameter processing
+            parameters = []
+            request_body = None
+            
+            # Convert nano_api params to OpenAPI parameters
+            for param in function_info.get("params", []):
+                if param["type"] == "array":
+                    # For GET requests, arrays use the [] suffix notation
+                    parameters.append({
+                        "name": f"{param['name']}[]",
+                        "in": "query",
+                        "required": param["required"],
+                        "schema": {
+                            "type": "array",
+                            "items": param.get("items", {"type": "string"})
+                        }
+                    })
+                else:
+                    parameters.append({
+                        "name": param["name"],
+                        "in": "query", 
+                        "required": param["required"],
+                        "schema": {"type": param["type"]}
+                    })
+            
+            # Create request body schema for POST requests
+            if function_info.get("params"):
+                properties = {}
+                required_fields = []
+                
+                for param in function_info["params"]:
+                    if param["type"] == "array":
+                        properties[param["name"]] = {
+                            "type": "array",
+                            "items": param.get("items", {"type": "string"})
+                        }
+                    else:
+                        properties[param["name"]] = {"type": param["type"]}
+                    
+                    if param["required"]:
+                        required_fields.append(param["name"])
+                
+                if properties:
+                    request_body = {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": properties
+                                }
+                            }
+                        }
+                    }
+                    if required_fields:
+                        request_body["content"]["application/json"]["schema"]["required"] = required_fields
+            
+            # Determine response content type based on function return type
+            response_content = {"application/json": {"schema": {"type": "object"}}}
+            
+            # Check if function likely returns an image based on return type annotation
+            return_type = function_info.get("return", "")
+            if return_type and any(img_type in return_type for img_type in NanoService.image_type_patterns):
+                response_content["image/png"] = {"schema": {"type": "string", "format": "binary"}}
+            
+            # Create path operations
+            spec["paths"][path] = {}
+            
+            # GET operation
+            get_op = {
+                "summary": function_info.get("doc") or f"Execute {function_name}",
+                "parameters": parameters,
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": response_content
+                    }
+                }
+            }
+            spec["paths"][path]["get"] = get_op
+            
+            # POST operation
+            post_op = {
+                "summary": function_info.get("doc") or f"Execute {function_name}",
+                "responses": {
+                    "200": {
+                        "description": "Successful response", 
+                        "content": response_content
+                    }
+                }
+            }
+            if request_body:
+                post_op["requestBody"] = request_body
+                
+            spec["paths"][path]["post"] = post_op
+        
+        return spec
+
+    def _extract_parameters(self, sig):
+        """Extract parameter information from function signature for OpenAPI spec."""
+        import inspect
+        from typing import get_origin, List
+        
+        params = []
+        for param_name, param in sig.parameters.items():
+            param_info = {
+                "name": param_name,
+                "required": param.default == inspect.Parameter.empty,
+                "type": "string"  # default type
+            }
+            
+            # Determine parameter type from annotation
+            if param.annotation != inspect._empty:
+                if param.annotation == int:
+                    param_info["type"] = "integer"
+                elif param.annotation == float:
+                    param_info["type"] = "number"
+                elif param.annotation == bool:
+                    param_info["type"] = "boolean"
+                elif param.annotation == str:
+                    param_info["type"] = "string"
+                elif get_origin(param.annotation) == list or param.annotation == List:
+                    param_info["type"] = "array"
+                    # Try to get the inner type for arrays
+                    if hasattr(param.annotation, '__args__') and param.annotation.__args__:
+                        inner_type = param.annotation.__args__[0]
+                        if inner_type == int:
+                            param_info["items"] = {"type": "integer"}
+                        elif inner_type == float:
+                            param_info["items"] = {"type": "number"}
+                        elif inner_type == str:
+                            param_info["items"] = {"type": "string"}
+                        else:
+                            param_info["items"] = {"type": "string"}
+                    else:
+                        param_info["items"] = {"type": "string"}
+            elif param.default != inspect.Parameter.empty:
+                # Infer type from default value
+                if isinstance(param.default, int):
+                    param_info["type"] = "integer"
+                elif isinstance(param.default, float):
+                    param_info["type"] = "number"
+                elif isinstance(param.default, bool):
+                    param_info["type"] = "boolean"
+                elif isinstance(param.default, str):
+                    param_info["type"] = "string"
+            
+            params.append(param_info)
+        
+        return params

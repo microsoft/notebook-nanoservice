@@ -28,8 +28,10 @@ service.start()
 ```
 
 ### View the manifest
-Open http://localhost:5001 to see a JSON manifest of your API (the global functions in your notebook).
-You may also see it in markdown at http://localhost:5001/?format=md
+View your API manifest in multiple formats:
+* **JSON**: http://localhost:5001 (default lightweight format)
+* **Markdown**: http://localhost:5001/?format=md
+* **OpenAPI v3**: http://localhost:5001/?format=openapi
 
 ### Invoke a function
 If you have a function such as:
@@ -45,6 +47,10 @@ See [test/sample.ipynb](test/sample.ipynb) for examples of type casting the para
 ```python
 service.stop()
 ```
+
+## Scenarios
+* Share your REST API via a tunnel such as Ngrok or Microsoft DevTunnels. 
+* [Stand up an MCP server over your REST API.](test/test_mcp.py)
 
 ## API
 
